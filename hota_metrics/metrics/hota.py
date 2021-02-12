@@ -13,7 +13,7 @@ class HOTA(_BaseMetric):
     def __init__(self):
         super().__init__()
         self.plottable = True
-        self.array_labels = np.arange(0.0, 1.01, 0.05)
+        self.array_labels = np.arange(-1, 1.01, 0.05)
         self.integer_array_fields = ['HOTA_TP', 'HOTA_FN', 'HOTA_FP']
         self.float_array_fields = ['HOTA', 'DetA', 'AssA', 'DetRe', 'DetPr', 'AssRe', 'AssPr', 'LocA', 'RHOTA']
         self.float_fields = ['HOTA(0)', 'LocA(0)', 'HOTALocA(0)']
@@ -154,7 +154,7 @@ class HOTA(_BaseMetric):
         plt.xlabel('alpha')
         plt.ylabel('score')
         plt.title(tracker + ' - ' + cls)
-        plt.axis([0, 1, 0, 1])
+        plt.axis([-1, 1, 0, 1])
         legend = []
         for name in self.float_array_fields:
             legend += [name + ' (' + str(np.round(np.mean(res[name]), 2)) + ')']
