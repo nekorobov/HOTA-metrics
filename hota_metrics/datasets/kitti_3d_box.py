@@ -209,9 +209,9 @@ class Kitti3DBox(_BaseDataset):
                 raw_data['classes'][t] = np.atleast_1d(
                     time_data[:, 2]).astype(int)
                 if is_gt:
-                    raw_data["ids"][t] = np.atleast_1d(time_data[:, 1]).astype(int)
+                    raw_data['ids'][t] = np.atleast_1d(time_data[:, 1]).astype(int)
                 else:
-                    raw_data["ids"][t] = np.atleast_1d(time_data[:, 1]).astype(str)
+                    raw_data['ids'][t] = np.atleast_1d(time_data[:, 1]).astype(str)
                 if is_gt:
                     gt_extras_dict = {'truncation': np.atleast_1d(time_data[:, 3].astype(int)),
                                       'occlusion': np.atleast_1d(time_data[:, 4].astype(int))}
@@ -224,41 +224,43 @@ class Kitti3DBox(_BaseDataset):
                         raw_data['tracker_confidences'][t] = np.ones(
                             time_data.shape[0])
             else:
-                raw_data["dets"][t] = np.empty((0, 4))
+                raw_data['dets'][t] = np.empty((0, 4))
                 if is_gt:
-                    raw_data["ids"][t] = np.empty(0).astype(int)
+                    raw_data['ids][t] = np.empty(0).astype(int)
                 else:
-                    raw_data["ids"][t] = np.empty(0).astype(str)
-                raw_data["classes"][t] = np.empty(0).astype(int)
+                    raw_data['ids'][t] = np.empty(0).astype(str)
+                raw_data['classes'][t] = np.empty(0).astype(int)
                 if is_gt:
                     gt_extras_dict = {
-                        "truncation": np.empty(0),
-                        "occlusion": np.empty(0),
+                        'truncation': np.empty(0),
+                        'occlusion': np.empty(0),
                     }
-                    raw_data["gt_extras"][t] = gt_extras_dict
+                    raw_data['gt_extras'][t] = gt_extras_dict
                 else:
-                    raw_data["tracker_confidences"][t] = np.empty(0)
+                    raw_data['tracker_confidences'][t] = np.empty(0)
             if is_gt:
                 if time_key in ignore_data.keys():
                     time_ignore = np.asarray(ignore_data[time_key], dtype=np.float)
-                    raw_data["gt_crowd_ignore_regions"][t] = np.atleast_2d(
+                    raw_data['gt_crowd_ignore_regions'][t] = np.atleast_2d(
                         time_ignore[:, 6:17]
                     )
                 else:
-                    raw_data["gt_crowd_ignore_regions"][t] = np.empty((0, 4))
+                    raw_data['gt_crowd_ignore_regions'][t] = np.empty((0, 4))
 
         if not is_gt:
             # map possibly non-int tracker ids to int ids
             unique_tracker_ids = set()
             for t in range(num_timesteps):
-                unique_tracker_ids.update(set(raw_data["ids"][t]))
+                unique_tracker_ids.update(set(raw_data['ids'][t]))
+            # replace every old id w/ its enumerated counterpart
             for new_id, old_id in enumerate(unique_tracker_ids):
                 for t in range(num_timesteps):
-                    raw_data["ids"][t] = np.where(
-                        raw_data["ids"][t] == old_id, new_id, raw_data["ids"][t]
+                    raw_data['ids'][t] = np.where(
+                        raw_data['ids'][t] == old_id, new_id, raw_data['ids'][t]
                     )
+        # recast to int (intermediate float step necessary because e.g. the string `3.0` can't be cast to int)
         for t in range(num_timesteps):
-            raw_data["ids"][t] = raw_data["ids"][t].astype(float).astype(int)
+            raw_data['ids'][t] = raw_data['ids'][t].astype(float).astype(int)
 
         if is_gt:
             key_map = {'ids': 'gt_ids',
