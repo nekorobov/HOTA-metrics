@@ -324,15 +324,15 @@ class Kitti3DBox(_BaseDataset):
             similarity_scores = raw_data['similarity_scores'][t][gt_class_mask,
                                                                  :][:, tracker_class_mask]
 
-            to_delete_by_confidence = tracker_confidences < 0.8
-            tracker_ids = np.delete(
-                tracker_ids, to_delete_by_confidence, axis=0)
-            tracker_dets = np.delete(
-                tracker_dets, to_delete_by_confidence, axis=0)
-            tracker_confidences = np.delete(
-                tracker_confidences, to_delete_by_confidence, axis=0)
-            similarity_scores = np.delete(
-                similarity_scores, to_delete_by_confidence, axis=1)
+            # to_delete_by_confidence = tracker_confidences < 0.8
+            # tracker_ids = np.delete(
+            #     tracker_ids, to_delete_by_confidence, axis=0)
+            # tracker_dets = np.delete(
+            #     tracker_dets, to_delete_by_confidence, axis=0)
+            # tracker_confidences = np.delete(
+            #     tracker_confidences, to_delete_by_confidence, axis=0)
+            # similarity_scores = np.delete(
+            #     similarity_scores, to_delete_by_confidence, axis=1)
 
             # Match tracker and gt dets (with hungarian algorithm) and remove tracker dets which match with gt dets
             # which are labeled as truncated, occluded, or belonging to a distractor class.
@@ -596,8 +596,8 @@ class Kitti3DBox(_BaseDataset):
                     giou3d = inter / (vol1) - (A_c - (vol1 + vol2)) / A_c
                 else:
                     giou3d = inter / (vol1 + vol2 - inter) - \
-                        (A_c - (vol1 + vol2)) / A_c
-                row_metrics.append(giou3d)
+                        (A_c - (vol1 + vol2 - inter)) / A_c
+                row_metrics.append((giou3d + 1) / 2.)
             if len(row_metrics):
                 giou3d_metrics.append(row_metrics)
         return np.array(giou3d_metrics).reshape((len(bboxes1), len(bboxes2)))
