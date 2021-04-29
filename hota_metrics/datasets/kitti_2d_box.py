@@ -287,6 +287,17 @@ class Kitti2DBox(_BaseDataset):
             tracker_dets = raw_data['tracker_dets'][t][tracker_class_mask]
             tracker_confidences = raw_data['tracker_confidences'][t][tracker_class_mask]
             similarity_scores = raw_data['similarity_scores'][t][gt_class_mask, :][:, tracker_class_mask]
+
+            # to_delete_by_confidence = tracker_confidences < 1
+            # tracker_ids = np.delete(
+            #     tracker_ids, to_delete_by_confidence, axis=0)
+            # tracker_dets = np.delete(
+            #     tracker_dets, to_delete_by_confidence, axis=0)
+            # tracker_confidences = np.delete(
+            #     tracker_confidences, to_delete_by_confidence, axis=0)
+            # similarity_scores = np.delete(
+            #     similarity_scores, to_delete_by_confidence, axis=1)
+
             # Match tracker and gt dets (with hungarian algorithm) and remove tracker dets which match with gt dets
             # which are labeled as truncated, occluded, or belonging to a distractor class.
             to_remove_matched = np.array([], np.int)

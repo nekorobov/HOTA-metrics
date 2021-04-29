@@ -321,10 +321,11 @@ class Kitti3DBox(_BaseDataset):
             tracker_ids = raw_data['tracker_ids'][t][tracker_class_mask]
             tracker_dets = raw_data['tracker_dets'][t][tracker_class_mask]
             tracker_confidences = raw_data['tracker_confidences'][t][tracker_class_mask]
-            similarity_scores = raw_data['similarity_scores'][t][gt_class_mask,
-                                                                 :][:, tracker_class_mask]
+            similarity_scores, similarity_scores_2d = raw_data['similarity_scores'][t]
+            similarity_scores = similarity_scores[gt_class_mask, :][:, tracker_class_mask]
+            similarity_scores_2d = similarity_scores_2d[gt_class_mask, :][:, tracker_class_mask]
 
-            # to_delete_by_confidence = tracker_confidences < 0.8
+            # to_delete_by_confidence = tracker_confidences < 0.7
             # tracker_ids = np.delete(
             #     tracker_ids, to_delete_by_confidence, axis=0)
             # tracker_dets = np.delete(
@@ -333,14 +334,16 @@ class Kitti3DBox(_BaseDataset):
             #     tracker_confidences, to_delete_by_confidence, axis=0)
             # similarity_scores = np.delete(
             #     similarity_scores, to_delete_by_confidence, axis=1)
+            # similarity_scores_2d = np.delete(
+            #     similarity_scores_2d, to_delete_by_confidence, axis=1)
 
             # Match tracker and gt dets (with hungarian algorithm) and remove tracker dets which match with gt dets
             # which are labeled as truncated, occluded, or belonging to a distractor class.
             to_remove_matched = np.array([], np.int)
             unmatched_indices = np.arange(tracker_ids.shape[0])
             if gt_ids.shape[0] > 0 and tracker_ids.shape[0] > 0:
-                matching_scores = similarity_scores.copy()
-                matching_scores[matching_scores < 0] = 0
+                matching_scores = similarity_scores_2d.copy()
+                matching_scores[matching_scores < 0.25] = 0
                 match_rows, match_cols = linear_sum_assignment(
                     -matching_scores)
                 actually_matched_mask = matching_scores[match_rows,
@@ -350,6 +353,8 @@ class Kitti3DBox(_BaseDataset):
 
                 is_distractor_class = np.isin(
                     gt_classes[match_rows], distractor_classes)
+                # print(gt_occlusion[match_rows] > self.max_occlusion)
+                # print(gt_truncation[match_rows] > self.max_truncation)
                 is_occluded_or_truncated = np.logical_or(gt_occlusion[match_rows] > self.max_occlusion,
                                                          gt_truncation[match_rows] > self.max_truncation)
                 to_remove_matched = np.logical_or(
@@ -367,7 +372,7 @@ class Kitti3DBox(_BaseDataset):
             # For unmatched tracker dets, also remove those that are greater than 50% within a crowd ignore region.
             crowd_ignore_regions = raw_data['gt_crowd_ignore_regions'][t]
             intersection_with_ignore_region = self._calculate_box_ious(unmatched_tracker_dets[:, :4], crowd_ignore_regions[:, :4],
-                                                                       box_format='xywh', do_ioa=True)
+                                                                       box_format='x0y0x1y1', do_ioa=True)
             is_within_crowd_ignore_region = np.any(
                 intersection_with_ignore_region > 0.5, axis=1)
 
@@ -432,9 +437,14 @@ class Kitti3DBox(_BaseDataset):
         return data
 
     def _calculate_similarities(self, gt_dets_t, tracker_dets_t):
+        # print(gt_dets_t, tracker_dets_t)
         similarity_scores = self.__box_3d_GIoU(
             gt_dets_t, tracker_dets_t, box_format='xyzhwlr')
-        return similarity_scores
+        # print(similarity_scores)
+        similarity_scores_2d = self._calculate_box_ious(
+            gt_dets_t[:, 0:4], tracker_dets_t[:, 0:4], box_format='x0y0x1y1')
+
+        return (similarity_scores, similarity_scores_2d)
 
     def __polygon_clip(self, subjectPolygon, clipPolygon):
         """ Clip a polygon with another polygon.
@@ -593,7 +603,8 @@ class Kitti3DBox(_BaseDataset):
                     aa_3d, bb_3d)
                 A_c = self.__bbox3d_min_oobb(aa_3d, bb_3d)
                 if do_ioa:
-                    giou3d = inter / (vol1) - (A_c - (vol1 + vol2)) / A_c
+                    giou3d = inter / (vol1) - \
+                        (A_c - (vol1 + vol2 - inter)) / A_c
                 else:
                     giou3d = inter / (vol1 + vol2 - inter) - \
                         (A_c - (vol1 + vol2 - inter)) / A_c
